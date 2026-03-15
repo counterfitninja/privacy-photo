@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Photo – Face Anonymiser</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <svg class="logo-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="32" cy="32" r="30" fill="#4f46e5"/>
+        <circle cx="32" cy="26" r="10" fill="#e0e7ff"/>
+        <ellipse cx="32" cy="62" rx="18" ry="16" fill="#e0e7ff"/>
+      </svg>
+      <span>Privacy Photo</span>
+    </div>
+    <p class="tagline">Detect &amp; anonymise faces in your photos — free, private, runs in your browser-to-server pipeline.</p>
+  </header>
+
+  <main>
+    <form id="uploadForm" enctype="multipart/form-data">
+      <!-- ── Drop zone ────────────────────────────────────────────────── -->
+      <div class="drop-zone" id="dropZone" tabindex="0" role="button" aria-label="Upload photos">
+        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+        </svg>
+        <p class="dz-text">Drag &amp; drop photos here<br/>or <span class="dz-link">browse files</span></p>
+        <p class="dz-hint">Supports JPG, PNG, WEBP, GIF, BMP &nbsp;·&nbsp; up to 50 MB total</p>
+        <input type="file" id="fileInput" name="photos" multiple
+               accept=".jpg,.jpeg,.png,.webp,.gif,.bmp" class="sr-only" />
+      </div>
+
+      <!-- ── Mode selector ─────────────────────────────────────────────── -->
+      <fieldset class="mode-fieldset">
+        <legend>Anonymisation mode</legend>
+        <label class="mode-option" id="modeBlurLabel">
+          <input type="radio" name="mode" value="blur" checked />
+          <span class="mode-card">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <strong>Blur face</strong>
+            <small>Gaussian blur shaped to the face oval</small>
+          </span>
+        </label>
+        <label class="mode-option" id="modeIconLabel">
+          <input type="radio" name="mode" value="icon" />
+          <span class="mode-card">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
+            </svg>
+            <strong>Icon replacement</strong>
+            <small>Replace face with an anonymous silhouette</small>
+          </span>
+        </label>
+      </fieldset>
+
+      <!-- ── File list preview ─────────────────────────────────────────── -->
+      <div id="fileList" class="file-list" hidden></div>
+
+      <!-- ── Submit ────────────────────────────────────────────────────── -->
+      <button type="submit" id="submitBtn" class="btn-primary" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Anonymise photos
+      </button>
+    </form>
+
+    <!-- ── Status / progress ──────────────────────────────────────────── -->
+    <div id="status" class="status" hidden role="status" aria-live="polite"></div>
+
+    <!-- ── Results ───────────────────────────────────────────────────── -->
+    <section id="results" class="results" hidden aria-label="Processed photos">
+      <h2>Results</h2>
+      <p id="resultsSummary" class="results-summary"></p>
+      <div id="resultCards" class="result-cards"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>All processing happens on the server and images are never stored.</p>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
