@@ -123,6 +123,21 @@ export function drawGooglyEyes(ctx, box) {
 
   drawOneEye(leftEyeX, eyeY);
   drawOneEye(rightEyeX, eyeY);
+
+  // Smiley mouth — arc centered below the eyes
+  const mouthCX = box.x + box.width / 2;
+  const mouthCY = box.y + box.height * 0.68;
+  const mouthR  = box.width * 0.22;
+  const mouthLineW = Math.max(2, box.width * 0.04);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(mouthCX, mouthCY, mouthR, 0.15 * Math.PI, 0.85 * Math.PI);
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth = mouthLineW;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.restore();
 }
 
 /** Emoji sticker centered over the face */
