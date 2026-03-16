@@ -25,7 +25,7 @@ npm run build
 2. Go to [Cloudflare Pages](https://pages.cloudflare.com) → **Create a project** → **Connect to Git**
 3. Select your repository
 4. Set the build configuration:
-   - **Framework preset:** Vite
+   - **Framework preset:** None
    - **Build command:** `npm run build`
    - **Build output directory:** `dist`
 5. Click **Save and Deploy**
@@ -69,3 +69,14 @@ npm run deploy
 5. In your GitHub repo go to **Settings → Pages** and set the source to the `gh-pages` branch.
 
 > **Note:** The `base` path in `vite.config.js` must match your repository name, otherwise assets won't load.
+
+---
+
+## Versioning
+
+The patch version in `package.json` is automatically incremented on every `git push` via a pre-push hook. Versions follow `major.minor.patch` — e.g. `1.0.0` → `1.0.1`.
+
+---
+
+**Version:** 0.0.0
+**1st and 7th Frome Scouts**
