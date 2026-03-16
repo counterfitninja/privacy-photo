@@ -11,10 +11,14 @@ export default function PhotoCard({ photo, onRemove, onRedetect, onAddManualFace
   const canvasRef = useRef(null);
   const origImgRef = useRef(null);
   const lightboxImgRef = useRef(null);
+  const zoomOuterRef = useRef(null);
+  const dragRef = useRef(null);
   const [addFaceMode, setAddFaceMode] = useState(false);
   const [faceLightboxOpen, setFaceLightboxOpen] = useState(false);
   const [imgNatural, setImgNatural] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     if (photo.processedCanvas && canvasRef.current) {
@@ -102,6 +106,70 @@ export default function PhotoCard({ photo, onRemove, onRedetect, onAddManualFace
     if (!photo.processedCanvas) return;
     setPreviewUrl(photo.processedCanvas.toDataURL('image/jpeg', 0.95));
   }
+
+  // ── Zoom / pan for face lightbox ──────────────────────────────────────────
+
+  function handleWheel(e) {
+    e.preventDefault();
+    const outer = zoomOuterRef.current;
+    if (!outer) return;
+    const rect = outer.getBoundingClientRect();
+    const cursorX = e.clientX - rect.left;
+    const cursorY = e.clientY - rect.top;
+    const factor = e.deltaY > 0 ? 0.85 : 1.18;
+    setZoom((prevZoom) => {
+      const newZoom = Math.min(6, Math.max(1, prevZoom * factor));
+      if (newZoom === 1) { setPan({ x: 0, y: 0 }); return 1; }
+      setPan((prevPan) => ({
+        x: cursorX - (cursorX - prevPan.x) * (newZoom / prevZoom),
+        y: cursorY - (cursorY - prevPan.y) * (newZoom / prevZoom),
+      }));
+      return newZoom;
+    });
+  }
+
+  function handlePanMouseDown(e) {
+    if (e.button !== 0) return;
+    dragRef.current = {
+      startX: e.clientX, startY: e.clientY,
+      startPanX: pan.x, startPanY: pan.y,
+      moved: false,
+    };
+    function onMove(me) {
+      const dx = me.clientX - dragRef.current.startX;
+      const dy = me.clientY - dragRef.current.startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        dragRef.current.moved = true;
+        setPan({ x: dragRef.current.startPanX + dx, y: dragRef.current.startPanY + dy });
+      }
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
+
+  function handleLightboxClick(e) {
+    if (dragRef.current?.moved) return;
+    handleClickWithRef(lightboxImgRef, e);
+  }
+
+  function adjustZoom(delta) {
+    setZoom((prev) => {
+      const newZoom = Math.min(6, Math.max(1, prev + delta));
+      if (newZoom === 1) setPan({ x: 0, y: 0 });
+      return newZoom;
+    });
+  }
+
+  function resetZoom() {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   function renderFaceMarkers(imgRef) {
     const detectedFaces = photo.faces || [];
@@ -195,6 +263,7 @@ export default function PhotoCard({ photo, onRemove, onRedetect, onAddManualFace
   function closeFaceLightbox() {
     setFaceLightboxOpen(false);
     setAddFaceMode(false);
+    resetZoom();
   }
 
   return (
@@ -291,104 +360,123 @@ export default function PhotoCard({ photo, onRemove, onRedetect, onAddManualFace
         >
           <div className="lightbox__inner">
             <div className="lightbox__toolbar">
-              <span className="lightbox__hint">Click image to add a blur region · Drag ↔ to resize · Click ✕ to remove a face</span>
+              <span className="lightbox__hint">Click to add · Drag ↔ to resize · ✕ to remove · Scroll or +/− to zoom · Drag to pan</span>
+              <div className="lightbox__zoom-controls">
+                <button className="lightbox__zoom-btn" onClick={() => adjustZoom(-0.5)} title="Zoom out">−</button>
+                <button className="lightbox__zoom-btn lightbox__zoom-btn--reset" onClick={resetZoom} title="Reset zoom">{Math.round(zoom * 100)}%</button>
+                <button className="lightbox__zoom-btn" onClick={() => adjustZoom(0.5)} title="Zoom in">+</button>
+              </div>
               <button className="lightbox__done-btn" onClick={closeFaceLightbox}>Done</button>
             </div>
             <div
-              className="lightbox__img-wrapper"
-              style={{ cursor: 'crosshair' }}
-              onClick={(e) => handleClickWithRef(lightboxImgRef, e)}
+              ref={zoomOuterRef}
+              className="lightbox__zoom-outer"
+              onWheel={handleWheel}
+              onMouseDown={handlePanMouseDown}
+              style={{ cursor: zoom > 1 ? 'grab' : 'crosshair' }}
             >
-              <img
-                ref={lightboxImgRef}
-                src={photo.originalUrl}
-                alt={photo.file.name}
-                className="lightbox__img"
-              />
-              {imgNatural && (
-                <svg
-                  className="face-overlay"
-                  viewBox={`0 0 ${imgNatural.w} ${imgNatural.h}`}
-                  style={{ pointerEvents: 'none' }}
-                >
-                  {(photo.faces || []).map((face, i) => {
-                    const cx = face.x + face.width / 2;
-                    const cy = face.y + face.height / 2;
-                    const rx = face.width / 2;
-                    const ry = face.height / 2;
-                    const hr = Math.max(10, face.width * 0.07);
-                    const sw = Math.max(2, face.width * 0.018);
-                    const fs = hr * 1.3;
-                    return (
-                      <g key={i}>
-                        <ellipse
-                          cx={cx} cy={cy} rx={rx} ry={ry}
-                          fill="rgba(59,130,246,0.15)"
-                          stroke="#3b82f6"
-                          strokeWidth={sw}
-                          strokeDasharray={`${face.width * 0.05} ${face.width * 0.025}`}
-                        />
-                        <circle
-                          cx={face.x + face.width} cy={face.y} r={hr}
-                          fill="#ef4444"
-                          style={{ pointerEvents: 'all', cursor: 'pointer' }}
-                          onClick={(e) => { e.stopPropagation(); onRemoveDetectedFace(photo.id, i); }}
-                        />
-                        <text
-                          x={face.x + face.width} y={face.y}
-                          textAnchor="middle" dominantBaseline="central"
-                          fill="white" fontSize={fs}
-                          style={{ pointerEvents: 'none', userSelect: 'none' }}
-                        >✕</text>
-                      </g>
-                    );
-                  })}
-                  {manualFaces.map((face) => {
-                    const cx = face.x + face.width / 2;
-                    const cy = face.y + face.height / 2;
-                    const rx = face.width / 2;
-                    const ry = face.height / 2;
-                    const hr = Math.max(10, face.width * 0.07);
-                    const sw = Math.max(2, face.width * 0.018);
-                    const fs = hr * 1.3;
-                    return (
-                      <g key={face.id}>
-                        <ellipse
-                          cx={cx} cy={cy} rx={rx} ry={ry}
-                          fill="rgba(251,146,60,0.2)"
-                          stroke="#f97316"
-                          strokeWidth={sw}
-                          strokeDasharray={`${face.width * 0.05} ${face.width * 0.025}`}
-                        />
-                        <circle
-                          cx={face.x + face.width} cy={face.y + face.height} r={hr}
-                          fill="#f97316"
-                          style={{ pointerEvents: 'all', cursor: 'se-resize' }}
-                          onMouseDown={(e) => startResizeWithRef(lightboxImgRef, e, face)}
-                        />
-                        <text
-                          x={face.x + face.width} y={face.y + face.height}
-                          textAnchor="middle" dominantBaseline="central"
-                          fill="white" fontSize={fs}
-                          style={{ pointerEvents: 'none', userSelect: 'none' }}
-                        >↔</text>
-                        <circle
-                          cx={face.x + face.width} cy={face.y} r={hr}
-                          fill="#ef4444"
-                          style={{ pointerEvents: 'all', cursor: 'pointer' }}
-                          onClick={(e) => { e.stopPropagation(); onRemoveManualFace(photo.id, face.id); }}
-                        />
-                        <text
-                          x={face.x + face.width} y={face.y}
-                          textAnchor="middle" dominantBaseline="central"
-                          fill="white" fontSize={fs}
-                          style={{ pointerEvents: 'none', userSelect: 'none' }}
-                        >✕</text>
-                      </g>
-                    );
-                  })}
-                </svg>
-              )}
+              <div
+                className="lightbox__img-wrapper"
+                style={{
+                  transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                  transformOrigin: '0 0',
+                  cursor: zoom > 1 ? 'grab' : 'crosshair',
+                  flex: 'none',
+                  overflow: 'visible',
+                }}
+                onClick={handleLightboxClick}
+              >
+                <img
+                  ref={lightboxImgRef}
+                  src={photo.originalUrl}
+                  alt={photo.file.name}
+                  className="lightbox__img"
+                />
+                {imgNatural && (
+                  <svg
+                    className="face-overlay"
+                    viewBox={`0 0 ${imgNatural.w} ${imgNatural.h}`}
+                    style={{ pointerEvents: 'none' }}
+                  >
+                    {(photo.faces || []).map((face, i) => {
+                      const cx = face.x + face.width / 2;
+                      const cy = face.y + face.height / 2;
+                      const rx = face.width / 2;
+                      const ry = face.height / 2;
+                      const hr = Math.max(10, face.width * 0.07);
+                      const sw = Math.max(2, face.width * 0.018);
+                      const fs = hr * 1.3;
+                      return (
+                        <g key={i}>
+                          <ellipse
+                            cx={cx} cy={cy} rx={rx} ry={ry}
+                            fill="rgba(59,130,246,0.15)"
+                            stroke="#3b82f6"
+                            strokeWidth={sw}
+                            strokeDasharray={`${face.width * 0.05} ${face.width * 0.025}`}
+                          />
+                          <circle
+                            cx={cx} cy={cy} r={hr}
+                            fill="#ef4444"
+                            style={{ pointerEvents: 'all', cursor: 'pointer' }}
+                            onClick={(e) => { e.stopPropagation(); onRemoveDetectedFace(photo.id, i); }}
+                          />
+                          <text
+                            x={cx} y={cy}
+                            textAnchor="middle" dominantBaseline="central"
+                            fill="white" fontSize={fs}
+                            style={{ pointerEvents: 'none', userSelect: 'none' }}
+                          >✕</text>
+                        </g>
+                      );
+                    })}
+                    {manualFaces.map((face) => {
+                      const cx = face.x + face.width / 2;
+                      const cy = face.y + face.height / 2;
+                      const rx = face.width / 2;
+                      const ry = face.height / 2;
+                      const hr = Math.max(10, face.width * 0.07);
+                      const sw = Math.max(2, face.width * 0.018);
+                      const fs = hr * 1.3;
+                      return (
+                        <g key={face.id}>
+                          <ellipse
+                            cx={cx} cy={cy} rx={rx} ry={ry}
+                            fill="rgba(251,146,60,0.2)"
+                            stroke="#f97316"
+                            strokeWidth={sw}
+                            strokeDasharray={`${face.width * 0.05} ${face.width * 0.025}`}
+                          />
+                          <circle
+                            cx={face.x + face.width} cy={face.y + face.height} r={hr}
+                            fill="#f97316"
+                            style={{ pointerEvents: 'all', cursor: 'se-resize' }}
+                            onMouseDown={(e) => startResizeWithRef(lightboxImgRef, e, face)}
+                          />
+                          <text
+                            x={face.x + face.width} y={face.y + face.height}
+                            textAnchor="middle" dominantBaseline="central"
+                            fill="white" fontSize={fs}
+                            style={{ pointerEvents: 'none', userSelect: 'none' }}
+                          >↔</text>
+                          <circle
+                            cx={cx} cy={cy} r={hr}
+                            fill="#ef4444"
+                            style={{ pointerEvents: 'all', cursor: 'pointer' }}
+                            onClick={(e) => { e.stopPropagation(); onRemoveManualFace(photo.id, face.id); }}
+                          />
+                          <text
+                            x={cx} y={cy}
+                            textAnchor="middle" dominantBaseline="central"
+                            fill="white" fontSize={fs}
+                            style={{ pointerEvents: 'none', userSelect: 'none' }}
+                          >✕</text>
+                        </g>
+                      );
+                    })}
+                  </svg>
+                )}
+              </div>
             </div>
           </div>
         </div>,

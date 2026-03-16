@@ -600,6 +600,34 @@ body { background: var(--bg); }
   min-height: 0;
 }
 
+.lightbox__zoom-outer {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  border-radius: var(--radius-sm);
+}
+
+.lightbox__zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.lightbox__zoom-btn {
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-family: var(--sans);
+  cursor: pointer;
+  line-height: 1;
+}
+.lightbox__zoom-btn:hover { background: var(--border); }
+.lightbox__zoom-btn--reset { min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }
+
 .lightbox__img {
   max-width: 100%;
   max-height: calc(94vh - 70px);
