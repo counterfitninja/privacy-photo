@@ -151,6 +151,16 @@ export default function App() {
   // Keep ref up-to-date so the debounced effect always calls the latest version
   processAllRef.current = processAll;
 
+  // Auto-process as soon as detection finishes for any photo
+  useEffect(() => {
+    const hasReady = photos.some((p) => p.status === 'ready');
+    if (!hasReady) return;
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => processAllRef.current?.(), 150);
+    return () => clearTimeout(debounceRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photos]);
+
   // Auto-reprocess when manual faces are added/updated/removed
   useEffect(() => {
     if (manualFaceVersion === 0) return;
