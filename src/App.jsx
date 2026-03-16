@@ -4,13 +4,14 @@ import EffectControls from './components/EffectControls';
 import PhotoCard from './components/PhotoCard';
 import DownloadBar from './components/DownloadBar';
 import { loadModels, detectFaces } from './utils/faceDetection';
-import { applyBlur, applyPixelate, applyEmoji, applyImageSticker } from './utils/imageEffects';
+import { applyBlur, applyPixelate, applyEmoji, applyImageSticker, drawGooglyEyes } from './utils/imageEffects';
 import './index.css';
 
 const DEFAULT_EFFECT = {
   type: 'blur',
   intensity: 90,
   coverage: 1.5,
+  googlyEyes: false,
   pixelSize: 12,
   stickerType: 'emoji',
   emoji: '😀',
@@ -120,6 +121,7 @@ export default function App() {
         for (const box of allFaces) {
           if (effect.type === 'blur') {
             applyBlur(ctx, img, box, effect.intensity, effect.coverage);
+            if (effect.googlyEyes) drawGooglyEyes(ctx, box);
           } else if (effect.type === 'pixelate') {
             applyPixelate(ctx, img, box, effect.pixelSize, effect.coverage);
           } else if (effect.type === 'sticker') {
@@ -168,7 +170,7 @@ export default function App() {
     debounceRef.current = setTimeout(() => processAllRef.current?.(), 250);
     return () => clearTimeout(debounceRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effect.type, effect.intensity, effect.coverage, effect.pixelSize, effect.emoji, effect.stickerSrc, effect.stickerType]);
+  }, [effect.type, effect.intensity, effect.coverage, effect.googlyEyes, effect.pixelSize, effect.emoji, effect.stickerSrc, effect.stickerType]);
 
   function handleAddManualFace(photoId, face) {
     setPhotos((prev) =>

@@ -75,6 +75,56 @@ export function applyPixelate(ctx, img, box, pixelSize, coverageScale = 1.0) {
   ctx.restore();
 }
 
+/**
+ * Draw googly eyes over the face region.
+ * Each eye has a white sclera, dark iris outline, and a randomly-offset pupil.
+ */
+export function drawGooglyEyes(ctx, box) {
+  const eyeR = box.width * 0.18;
+  const pupilR = eyeR * 0.45;
+  const eyeY = box.y + box.height * 0.38;
+  const leftEyeX  = box.x + box.width * 0.32;
+  const rightEyeX = box.x + box.width * 0.68;
+
+  function drawOneEye(x, y) {
+    // Sclera
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, eyeR, 0, Math.PI * 2);
+    ctx.fillStyle = 'white';
+    ctx.fill();
+    ctx.strokeStyle = '#1a1a1a';
+    ctx.lineWidth = Math.max(1, eyeR * 0.1);
+    ctx.stroke();
+    ctx.restore();
+
+    // Googly pupil — random offset within sclera
+    const maxOff = (eyeR - pupilR) * 0.8;
+    const angle = Math.random() * Math.PI * 2;
+    const dist  = Math.random() * maxOff;
+    const px = x + Math.cos(angle) * dist;
+    const py = y + Math.sin(angle) * dist;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(px, py, pupilR, 0, Math.PI * 2);
+    ctx.fillStyle = '#111';
+    ctx.fill();
+    ctx.restore();
+
+    // Specular highlight
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(px - pupilR * 0.28, py - pupilR * 0.28, pupilR * 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  drawOneEye(leftEyeX, eyeY);
+  drawOneEye(rightEyeX, eyeY);
+}
+
 /** Emoji sticker centered over the face */
 export function applyEmoji(ctx, box, emoji) {
   const size = Math.round(Math.max(box.width, box.height) * 1.15);

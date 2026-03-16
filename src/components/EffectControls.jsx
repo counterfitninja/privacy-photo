@@ -72,6 +72,16 @@ export default function EffectControls({ effect, onChange, onProcess, processing
               </span>
             </div>
           </div>
+          <div className="effect-controls__section">
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={effect.googlyEyes}
+                onChange={(e) => onChange({ googlyEyes: e.target.checked })}
+              />
+              👀 Googly eyes
+            </label>
+          </div>
         </>
       )}
 
