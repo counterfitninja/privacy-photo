@@ -7,7 +7,7 @@ const MODELS = [
   { id: 'tiny',  label: 'Portrait', title: 'TinyFaceDetector — better for single close-up portraits' },
 ];
 
-export default function PhotoCard({ photo, onRemove, onRedetect, onAddManualFace, onUpdateManualFace, onRemoveManualFace }) {
+export default function PhotoCard({ photo, onRemove, onRedetect, onAddManualFace, onUpdateManualFace, onRemoveManualFace, onRemoveDetectedFace }) {
   const canvasRef = useRef(null);
   const origImgRef = useRef(null);
   const lightboxImgRef = useRef(null);
@@ -104,13 +104,46 @@ export default function PhotoCard({ photo, onRemove, onRedetect, onAddManualFace
   }
 
   function renderFaceMarkers(imgRef) {
-    if (!imgNatural || manualFaces.length === 0) return null;
+    const detectedFaces = photo.faces || [];
+    if (!imgNatural || (manualFaces.length === 0 && detectedFaces.length === 0)) return null;
     return (
       <svg
         className="face-overlay"
         viewBox={`0 0 ${imgNatural.w} ${imgNatural.h}`}
         style={{ pointerEvents: 'none' }}
       >
+        {detectedFaces.map((face, i) => {
+          const cx = face.x + face.width / 2;
+          const cy = face.y + face.height / 2;
+          const rx = face.width / 2;
+          const ry = face.height / 2;
+          const hr = Math.max(10, face.width * 0.07);
+          const sw = Math.max(2, face.width * 0.018);
+          const fs = hr * 1.3;
+          return (
+            <g key={i}>
+              <ellipse
+                cx={cx} cy={cy} rx={rx} ry={ry}
+                fill="rgba(59,130,246,0.15)"
+                stroke="#3b82f6"
+                strokeWidth={sw}
+                strokeDasharray={`${face.width * 0.05} ${face.width * 0.025}`}
+              />
+              <circle
+                cx={face.x + face.width} cy={face.y} r={hr}
+                fill="#ef4444"
+                style={{ pointerEvents: 'all', cursor: 'pointer' }}
+                onClick={(e) => { e.stopPropagation(); onRemoveDetectedFace(photo.id, i); }}
+              />
+              <text
+                x={face.x + face.width} y={face.y}
+                textAnchor="middle" dominantBaseline="central"
+                fill="white" fontSize={fs}
+                style={{ pointerEvents: 'none', userSelect: 'none' }}
+              >✕</text>
+            </g>
+          );
+        })}
         {manualFaces.map((face) => {
           const cx = face.x + face.width / 2;
           const cy = face.y + face.height / 2;
@@ -190,7 +223,7 @@ export default function PhotoCard({ photo, onRemove, onRedetect, onAddManualFace
               className="photo-card__img"
               onLoad={(e) => setImgNatural({ w: e.target.naturalWidth, h: e.target.naturalHeight })}
             />
-            {(addFaceMode || manualFaces.length > 0) && renderFaceMarkers(origImgRef)}
+            {(addFaceMode || manualFaces.length > 0 || (photo.faces || []).length > 0) && renderFaceMarkers(origImgRef)}
           </div>
         </div>
         {isDone && (
@@ -258,7 +291,7 @@ export default function PhotoCard({ photo, onRemove, onRedetect, onAddManualFace
         >
           <div className="lightbox__inner">
             <div className="lightbox__toolbar">
-              <span className="lightbox__hint">Click anywhere on the image to add a blur region · Drag ↔ to resize · Click ✕ to delete</span>
+              <span className="lightbox__hint">Click image to add a blur region · Drag ↔ to resize · Click ✕ to remove a face</span>
               <button className="lightbox__done-btn" onClick={closeFaceLightbox}>Done</button>
             </div>
             <div
@@ -278,6 +311,38 @@ export default function PhotoCard({ photo, onRemove, onRedetect, onAddManualFace
                   viewBox={`0 0 ${imgNatural.w} ${imgNatural.h}`}
                   style={{ pointerEvents: 'none' }}
                 >
+                  {(photo.faces || []).map((face, i) => {
+                    const cx = face.x + face.width / 2;
+                    const cy = face.y + face.height / 2;
+                    const rx = face.width / 2;
+                    const ry = face.height / 2;
+                    const hr = Math.max(10, face.width * 0.07);
+                    const sw = Math.max(2, face.width * 0.018);
+                    const fs = hr * 1.3;
+                    return (
+                      <g key={i}>
+                        <ellipse
+                          cx={cx} cy={cy} rx={rx} ry={ry}
+                          fill="rgba(59,130,246,0.15)"
+                          stroke="#3b82f6"
+                          strokeWidth={sw}
+                          strokeDasharray={`${face.width * 0.05} ${face.width * 0.025}`}
+                        />
+                        <circle
+                          cx={face.x + face.width} cy={face.y} r={hr}
+                          fill="#ef4444"
+                          style={{ pointerEvents: 'all', cursor: 'pointer' }}
+                          onClick={(e) => { e.stopPropagation(); onRemoveDetectedFace(photo.id, i); }}
+                        />
+                        <text
+                          x={face.x + face.width} y={face.y}
+                          textAnchor="middle" dominantBaseline="central"
+                          fill="white" fontSize={fs}
+                          style={{ pointerEvents: 'none', userSelect: 'none' }}
+                        >✕</text>
+                      </g>
+                    );
+                  })}
                   {manualFaces.map((face) => {
                     const cx = face.x + face.width / 2;
                     const cy = face.y + face.height / 2;

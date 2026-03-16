@@ -207,6 +207,15 @@ export default function App() {
     setManualFaceVersion((v) => v + 1);
   }
 
+  function handleRemoveDetectedFace(photoId, faceIndex) {
+    setPhotos((prev) =>
+      prev.map((p) => p.id === photoId
+        ? { ...p, faces: (p.faces || []).filter((_, i) => i !== faceIndex) }
+        : p)
+    );
+    setManualFaceVersion((v) => v + 1);
+  }
+
   function removePhoto(id) {
     setPhotos((prev) => {
       const photo = prev.find((p) => p.id === id);
@@ -267,6 +276,7 @@ export default function App() {
                     onAddManualFace={handleAddManualFace}
                     onUpdateManualFace={handleUpdateManualFace}
                     onRemoveManualFace={handleRemoveManualFace}
+                    onRemoveDetectedFace={handleRemoveDetectedFace}
                   />
                 ))}
               </div>
