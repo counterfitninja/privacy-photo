@@ -1,102 +1,40 @@
 /**
- * Box blur via direct pixel manipulation — sharp edges, no CSS filter bleed.
- * The blur is computed on the full rectangular region, then stamped back through
- * an ellipse clip so only the face shape is covered (not a square patch).
+ * GPU-accelerated blur via the Canvas 2D filter API.
+ * Chrome routes ctx.filter through the GPU compositor (Skia/GL), making this
+ * orders of magnitude faster than the previous JS pixel-loop approach.
+ * The blurred image is stamped back through an ellipse clip so only the face
+ * shape is covered.
  */
 export function applyBlur(ctx, _img, box, radius, coverageScale = 1.0) {
-  // Increase pad proportionally so the blurred rect always fully covers the ellipse
-  const basePad = Math.round(box.width * 0.15);
-  const extra = Math.max(0, coverageScale - 1);
-  const pad = Math.round(basePad + box.width * 0.5 * extra);
   const W = ctx.canvas.width;
   const H = ctx.canvas.height;
-  const rx = Math.max(0, Math.floor(box.x - pad));
-  const ry = Math.max(0, Math.floor(box.y - pad));
-  const rw = Math.min(W - rx, Math.ceil(box.width + pad * 2));
-  const rh = Math.min(H - ry, Math.ceil(box.height + pad * 2));
 
-  // --- Step 1: box-blur the rectangular region into a separate canvas ---
-  const imageData = ctx.getImageData(0, 0, W, H);
-  const p = imageData.data;
+  // Map the intensity slider (4–200) to a CSS blur radius in pixels.
+  // CSS blur(Xpx) is a Gaussian with σ=X, so a modest value produces a strong effect.
+  const blurPx = Math.max(1, Math.round(radius / 5));
 
-  // 7 passes: approximates a very strong Gaussian (sigma ≈ √7 × radius)
-  for (let i = 0; i < 7; i++) {
-    _boxH(p, W, H, rx, ry, rw, rh, radius);
-    _boxV(p, W, H, rx, ry, rw, rh, radius);
-  }
+  // Render the current canvas state through the GPU blur filter into a temp canvas
+  const tmp = document.createElement('canvas');
+  tmp.width = W;
+  tmp.height = H;
+  const tc = tmp.getContext('2d');
+  tc.filter = `blur(${blurPx}px)`;
+  tc.drawImage(ctx.canvas, 0, 0);
 
-  // Write the blurred pixels to a scratch canvas (original ctx is untouched)
-  const blurred = document.createElement('canvas');
-  blurred.width = W;
-  blurred.height = H;
-  blurred.getContext('2d').putImageData(imageData, 0, 0);
-
-  // --- Step 2: stamp the blurred region back through an ellipse clip ---
-  // Ellipse is sized to the face bounding box, slightly extended vertically
-  // to cover forehead/chin.
+  // Ellipse sized to the face bounding box
   const cx = box.x + box.width / 2;
-  // Shift center upward as coverage grows — hair/forehead sits above the detected face box
   const cyOffset = (coverageScale - 1) * box.height * 0.15;
   const cy = box.y + box.height / 2 - cyOffset;
   const ex = (box.width / 2) * 1.05 * coverageScale;
   const ey = (box.height / 2) * 1.1 * coverageScale;
 
+  // Stamp the blurred version back through the ellipse clip
   ctx.save();
   ctx.beginPath();
   ctx.ellipse(cx, cy, ex, ey, 0, 0, Math.PI * 2);
   ctx.clip();
-  ctx.drawImage(blurred, 0, 0);
+  ctx.drawImage(tmp, 0, 0);
   ctx.restore();
-}
-
-/** Horizontal box-blur pass — reads & writes full-image pixel array */
-function _boxH(p, W, H, rx, ry, rw, rh, r) {
-  const buf = new Uint8ClampedArray(rw * rh * 3);
-  const d = r * 2 + 1;
-  for (let y = ry; y < ry + rh; y++) {
-    for (let x = rx; x < rx + rw; x++) {
-      let R = 0, G = 0, B = 0;
-      for (let dx = -r; dx <= r; dx++) {
-        const nx = Math.max(0, Math.min(W - 1, x + dx));
-        const i = (y * W + nx) * 4;
-        R += p[i]; G += p[i + 1]; B += p[i + 2];
-      }
-      const bi = ((y - ry) * rw + (x - rx)) * 3;
-      buf[bi] = R / d; buf[bi + 1] = G / d; buf[bi + 2] = B / d;
-    }
-  }
-  for (let y = ry; y < ry + rh; y++) {
-    for (let x = rx; x < rx + rw; x++) {
-      const bi = ((y - ry) * rw + (x - rx)) * 3;
-      const i = (y * W + x) * 4;
-      p[i] = buf[bi]; p[i + 1] = buf[bi + 1]; p[i + 2] = buf[bi + 2];
-    }
-  }
-}
-
-/** Vertical box-blur pass — reads & writes full-image pixel array */
-function _boxV(p, W, H, rx, ry, rw, rh, r) {
-  const buf = new Uint8ClampedArray(rw * rh * 3);
-  const d = r * 2 + 1;
-  for (let y = ry; y < ry + rh; y++) {
-    for (let x = rx; x < rx + rw; x++) {
-      let R = 0, G = 0, B = 0;
-      for (let dy = -r; dy <= r; dy++) {
-        const ny = Math.max(0, Math.min(H - 1, y + dy));
-        const i = (ny * W + x) * 4;
-        R += p[i]; G += p[i + 1]; B += p[i + 2];
-      }
-      const bi = ((y - ry) * rw + (x - rx)) * 3;
-      buf[bi] = R / d; buf[bi + 1] = G / d; buf[bi + 2] = B / d;
-    }
-  }
-  for (let y = ry; y < ry + rh; y++) {
-    for (let x = rx; x < rx + rw; x++) {
-      const bi = ((y - ry) * rw + (x - rx)) * 3;
-      const i = (y * W + x) * 4;
-      p[i] = buf[bi]; p[i + 1] = buf[bi + 1]; p[i + 2] = buf[bi + 2];
-    }
-  }
 }
 
 /**

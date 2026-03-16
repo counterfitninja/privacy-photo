@@ -24,6 +24,7 @@ export default function App() {
   const [photos, setPhotos] = useState([]);
   const [effect, setEffect] = useState(DEFAULT_EFFECT);
   const [processing, setProcessing] = useState(false);
+  const [manualFaceVersion, setManualFaceVersion] = useState(0);
   const stickerImgRef = useRef(null);
   const debounceRef = useRef(null);
   const didMountRef = useRef(false);
@@ -78,6 +79,7 @@ export default function App() {
       file,
       originalUrl: URL.createObjectURL(file),
       faces: null,
+      manualFaces: [],
       processedCanvas: null,
       status: 'detecting',
       detectionModel: 'both',
@@ -94,7 +96,10 @@ export default function App() {
     if (processing) return;
     setProcessing(true);
 
-    const eligible = photos.filter((p) => p.status === 'ready' || p.status === 'done');
+    const eligible = photos.filter((p) =>
+      p.status === 'ready' || p.status === 'done' ||
+      (p.status === 'no-faces' && (p.manualFaces || []).length > 0)
+    );
 
     for (const photo of eligible) {
       setPhotos((prev) =>
@@ -111,7 +116,8 @@ export default function App() {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0);
 
-        for (const box of photo.faces) {
+        const allFaces = [...(photo.faces || []), ...(photo.manualFaces || [])];
+        for (const box of allFaces) {
           if (effect.type === 'blur') {
             applyBlur(ctx, img, box, effect.intensity, effect.coverage);
           } else if (effect.type === 'pixelate') {
@@ -143,6 +149,15 @@ export default function App() {
   // Keep ref up-to-date so the debounced effect always calls the latest version
   processAllRef.current = processAll;
 
+  // Auto-reprocess when manual faces are added/updated/removed
+  useEffect(() => {
+    if (manualFaceVersion === 0) return;
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => processAllRef.current?.(), 300);
+    return () => clearTimeout(debounceRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [manualFaceVersion]);
+
   // Auto-reprocess already-processed photos when effect settings change
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -154,6 +169,31 @@ export default function App() {
     return () => clearTimeout(debounceRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effect.type, effect.intensity, effect.coverage, effect.pixelSize, effect.emoji, effect.stickerSrc, effect.stickerType]);
+
+  function handleAddManualFace(photoId, face) {
+    setPhotos((prev) =>
+      prev.map((p) => p.id === photoId ? { ...p, manualFaces: [...(p.manualFaces || []), face] } : p)
+    );
+    setManualFaceVersion((v) => v + 1);
+  }
+
+  function handleUpdateManualFace(photoId, faceId, updates) {
+    setPhotos((prev) =>
+      prev.map((p) => p.id === photoId
+        ? { ...p, manualFaces: (p.manualFaces || []).map((f) => f.id === faceId ? { ...f, ...updates } : f) }
+        : p)
+    );
+    setManualFaceVersion((v) => v + 1);
+  }
+
+  function handleRemoveManualFace(photoId, faceId) {
+    setPhotos((prev) =>
+      prev.map((p) => p.id === photoId
+        ? { ...p, manualFaces: (p.manualFaces || []).filter((f) => f.id !== faceId) }
+        : p)
+    );
+    setManualFaceVersion((v) => v + 1);
+  }
 
   function removePhoto(id) {
     setPhotos((prev) => {
@@ -212,6 +252,9 @@ export default function App() {
                     photo={photo}
                     onRemove={removePhoto}
                     onRedetect={(model) => runDetection(photo, model)}
+                    onAddManualFace={handleAddManualFace}
+                    onUpdateManualFace={handleUpdateManualFace}
+                    onRemoveManualFace={handleRemoveManualFace}
                   />
                 ))}
               </div>

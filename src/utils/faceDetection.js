@@ -1,9 +1,17 @@
 import * as faceapi from 'face-api.js';
+import * as tf from '@tensorflow/tfjs-core';
 
 let modelsLoaded = false;
 
 export async function loadModels() {
   if (modelsLoaded) return;
+  // Prefer WebGL (GPU) backend; falls back to CPU if unavailable
+  try {
+    await tf.setBackend('webgl');
+    await tf.ready();
+  } catch {
+    // WebGL unavailable, TF.js will use CPU fallback
+  }
   await Promise.all([
     faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
     faceapi.nets.tinyFaceDetector.loadFromUri('/models'),

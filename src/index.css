@@ -406,12 +406,25 @@ body { background: var(--bg); }
   white-space: nowrap;
 }
 
+.photo-card__img-wrapper {
+  position: relative;
+  line-height: 0;
+}
+
 .photo-card__img {
   width: 100%;
   height: auto;
   display: block;
   max-height: 260px;
   object-fit: contain;
+}
+
+.face-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .photo-card__footer {
