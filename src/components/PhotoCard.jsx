@@ -333,7 +333,7 @@ export default function PhotoCard({ photo, onRemove, onRedetect, onAddManualFace
               if (next) setFaceLightboxOpen(true);
             }}
           >
-            {addFaceMode ? '✕ Cancel' : '+ Add face'}
+            {addFaceMode ? '✕ Cancel' : '✏ Edit original'}
           </button>
         </div>
       )}
@@ -360,7 +360,17 @@ export default function PhotoCard({ photo, onRemove, onRedetect, onAddManualFace
         >
           <div className="lightbox__inner">
             <div className="lightbox__toolbar">
-              <span className="lightbox__hint">Click to add · Drag ↔ to resize · ✕ to remove · Scroll or +/− to zoom · Drag to pan</span>
+              <span className="lightbox__hint">
+                <span className="lightbox__hint-item">🖱 <b>Click</b> image to add blur area</span>
+                <span className="lightbox__hint-sep">·</span>
+                <span className="lightbox__hint-item"><b>↔</b> drag handle to resize</span>
+                <span className="lightbox__hint-sep">·</span>
+                <span className="lightbox__hint-item"><b>✕</b> on a face to remove it</span>
+                <span className="lightbox__hint-sep">·</span>
+                <span className="lightbox__hint-item">🔍 scroll or +/− to zoom</span>
+                <span className="lightbox__hint-sep">·</span>
+                <span className="lightbox__hint-item">✋ drag to pan when zoomed</span>
+              </span>
               <div className="lightbox__zoom-controls">
                 <button className="lightbox__zoom-btn" onClick={() => adjustZoom(-0.5)} title="Zoom out">−</button>
                 <button className="lightbox__zoom-btn lightbox__zoom-btn--reset" onClick={resetZoom} title="Reset zoom">{Math.round(zoom * 100)}%</button>

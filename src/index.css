@@ -568,13 +568,18 @@ body { background: var(--bg); }
 }
 
 .lightbox__hint {
-  font-size: 13px;
+  font-size: 12px;
   color: rgba(255,255,255,.75);
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  flex: 1;
 }
+.lightbox__hint b { color: rgba(255,255,255,.95); }
+.lightbox__hint-sep { color: rgba(255,255,255,.35); }
+.lightbox__hint-item { white-space: nowrap; }
 
 .lightbox__done-btn {
   padding: 6px 18px;
