@@ -130,13 +130,13 @@ export default function PhotoCard({ photo, onRemove, onRedetect, onAddManualFace
                 strokeDasharray={`${face.width * 0.05} ${face.width * 0.025}`}
               />
               <circle
-                cx={face.x + face.width} cy={face.y} r={hr}
+                cx={cx} cy={cy} r={hr}
                 fill="#ef4444"
                 style={{ pointerEvents: 'all', cursor: 'pointer' }}
                 onClick={(e) => { e.stopPropagation(); onRemoveDetectedFace(photo.id, i); }}
               />
               <text
-                x={face.x + face.width} y={face.y}
+                x={cx} y={cy}
                 textAnchor="middle" dominantBaseline="central"
                 fill="white" fontSize={fs}
                 style={{ pointerEvents: 'none', userSelect: 'none' }}
@@ -174,13 +174,13 @@ export default function PhotoCard({ photo, onRemove, onRedetect, onAddManualFace
                 style={{ pointerEvents: 'none', userSelect: 'none' }}
               >↔</text>
               <circle
-                cx={face.x + face.width} cy={face.y} r={hr}
+                cx={cx} cy={cy} r={hr}
                 fill="#ef4444"
                 style={{ pointerEvents: 'all', cursor: 'pointer' }}
                 onClick={(e) => { e.stopPropagation(); onRemoveManualFace(photo.id, face.id); }}
               />
               <text
-                x={face.x + face.width} y={face.y}
+                x={cx} y={cy}
                 textAnchor="middle" dominantBaseline="central"
                 fill="white" fontSize={fs}
                 style={{ pointerEvents: 'none', userSelect: 'none' }}
