@@ -9,8 +9,8 @@ import './index.css';
 
 const DEFAULT_EFFECT = {
   type: 'blur',
-  intensity: 30,
-  coverage: 1.0,
+  intensity: 90,
+  coverage: 1.5,
   pixelSize: 12,
   stickerType: 'emoji',
   emoji: '😀',
