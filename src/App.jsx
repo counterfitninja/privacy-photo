@@ -220,6 +220,10 @@ export default function App() {
           )}
         </div>
       </main>
+      <footer className="app-footer">
+        <span>1st and 7th Frome Scouts</span>
+        <span>v{__APP_VERSION__}</span>
+      </footer>
     </div>
   );
 }
